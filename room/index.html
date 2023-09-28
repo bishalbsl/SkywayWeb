@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SkyWay - Room example</title>
+    <link rel="stylesheet" href="../_shared/style.css">
+    <style>
+      #map_canvas2 {
+          width: 100%;
+          height: 600px;
+          border: 1px solid black;
+          float: right;
+      }
+  </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1 class="heading">Room example</h1>
+      <p class="note">
+        Change Room mode (before join in a room):
+        <a href="#">mesh</a> / <a href="#sfu">sfu</a>
+      </p>
+      <div id="vue-map">
+        <div id="map_canvas2"></div>
+      </div>
+      </div>
+      <div class="room">
+        <div>
+          <video id="js-local-stream"></video>
+          <span id="js-room-mode"></span>:
+          <input type="text" placeholder="Room Name" id="js-room-id">
+          <button id="js-join-trigger">Join</button>
+          <button id="js-leave-trigger">Leave</button>
+        <div class="remote-streams" id="js-remote-streams"></div>
+
+        <div>
+          <pre class="messages" id="js-messages"></pre>
+          <input type="text" id="js-local-text">
+          <button id="js-send-trigger">Send</button>
+        </div>
+      </div>
+      <p class="meta" id="js-meta"></p>
+    </div>
+    <script src="https://cdn.webrtc.ecl.ntt.com/skyway-4.4.5.js"></script>
+    <script src="../_shared/key.js"></script>
+    <script src="./script.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false"></script>
+
+    <script>
+      new Vue({
+          el: '#vue-map',
+          data: {
+              lat: 0,
+              lng: 0,
+              ANOTHER_USER_LAT: 33.242818766904165,
+              ANOTHER_USER_LNG: 131.59947290460616,
+              messages: "",
+              map: null,
+              userMarker: null,
+          },
+          mounted() {
+               // Store a reference to this.$refs.messages
+              const messagesElement = document.getElementById("js-messages");
+              
+              // Access the updated content of the <pre> element
+              this.messages = messagesElement.textContent;
+              
+              if (navigator.geolocation) {
+                  navigator.geolocation.watchPosition((pos) => {
+                      this.lat = pos.coords.latitude;
+                      this.lng = pos.coords.longitude;
+                      this.accuracy = pos.coords.accuracy;
+
+                      console.log('this.lat', this.lat);
+                      console.log('this.lng', this.lng);
+
+                      var myOptions = {
+                          zoom: 10,
+                          mapTypeId: google.maps.MapTypeId.ROADMAP,
+                          center: new google.maps.LatLng(this.lat, this.lng)
+                      };
+
+                      this.map = new google.maps.Map(document.getElementById('map_canvas2'), myOptions);
+
+                      var marker = new google.maps.Marker({
+                          position: new google.maps.LatLng(this.lat, this.lng),
+                          map: this.map,
+                          title: 'Your Location'
+                      });
+
+                        // Bounding box coordinates for Japan
+                      var japanBounds = {
+                          north: 33.111483,
+                          south: 33.396308,
+                          east: 131.496672,
+                          west: 131.934570
+                      };
+
+
+                        // Custom marker icon for another user
+                        var customMarkerIcon = {
+                          url: 'person.png', // Replace with the URL of your custom marker icon
+                          scaledSize: new google.maps.Size(40, 40), // Adjust the size as needed
+                      };
+
+                      // Create a marker for another user with the custom icon
+                      this.userMarker = new google.maps.Marker({
+                          position: new google.maps.LatLng(this.ANOTHER_USER_LAT, this.ANOTHER_USER_LNG), // Replace with the other user's coordinates
+                          map: this.map,
+                          icon: customMarkerIcon,
+                          title: 'Another User'
+                      });
+
+                   
+             
+
+                      // Update the user marker position every second
+                      //setInterval(updateUserMarkerPosition, 1000);
+                  });
+              } else {
+                  console.error('Geolocation is not supported by this browser.');
+              }
+          },
+          watch:{
+            messages(newVal){
+              console.log('newVal', newVal)
+              updateUserMarkerPosition()
+            }
+          },
+          methods: {
+            // Function to update the position of the user marker every second
+            updateUserMarkerPosition() {
+
+              if(this.messages != ""){
+                // Remove the prefix before parsing as JSON
+                  const jsonStartIndex = this.messages.indexOf('{'); // Find the index where the JSON starts
+                  const jsonSubstring = this.messages.substring(jsonStartIndex);
+                try {
+                  const jsonObject = JSON.parse(jsonSubstring);
+                  console.log('jsonObject', jsonObject);
+                  console.log('userData machineId', jsonObject.userData.machineId);
+
+                  const jsonObjectLatLng = JSON.parse(jsonObject.userData.machineId);
+
+                  console.log('userData machineId', jsonObjectLatLng.lat);
+                  console.log('userData machineId', jsonObjectLatLng.lng);
+
+                  
+                // Update the position of the user marker
+                this.userMarker.setPosition(new google.maps.LatLng(jsonObjectLatLng.lat, jsonObjectLatLng.lng));
+
+                // Update the map center
+                this.map.setCenter(userMarker.getPosition());
+
+                } catch (error) {
+                  console.error('Error parsing JSON:', error);
+                }
+              }
+
+
+              }
+
+          }
+
+      });
+  </script>
+  </body>
+</html>
